@@ -11,7 +11,7 @@ const port = 3000;
 const launchArgs = JSON.stringify({
   args: [`--window-size=1920,1080`],
   headless: false,
-  stealth: true,
+  stealth: false,
   timeout: 600000,
 });
 
