@@ -1,0 +1,6 @@
+curl --location 'http://localhost:3000/add_account' \
+--header 'Content-Type: multipart/form-data' \
+--form 'smartlead_login_email="darsh@magicallygenius.ai"' \
+--form 'smartlead_login_password="Darshkinghou@123@"' \
+--form 'google_login_email="john@protryleaderboardjobs.com"' \
+--form 'google_login_password="M4ivzMRgC6vsiYB"'
