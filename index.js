@@ -1,11 +1,16 @@
 const express = require("express");
 const puppeteer = require("puppeteer-core");
+
+// add stealth plugin and use defaults (all evasion techniques)
+// const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+// puppeteer.use(StealthPlugin());
 const multer = require("multer");
 const bodyParser = require("body-parser");
 require("dotenv").config();
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const app = express();
 const port = 3000;
+// puppeteer.use(StealthPlugin());
 
 // Puppeteer launch arguments
 const launchArgs = JSON.stringify({
@@ -23,7 +28,7 @@ app.use(bodyParser.json()); // To parse JSON bodies
 app.use(bodyParser.urlencoded({ extended: true })); // To parse URL-encoded bodies
 
 // Handling POST requests
-app.post("/add_account", upload.none(), async (req, res) => {
+app.post("/import-to-smartlead", upload.none(), async (req, res) => {
   let {
     smartlead_login_email,
     smartlead_login_password,
@@ -63,6 +68,9 @@ app.post("/add_account", upload.none(), async (req, res) => {
   const browser = await puppeteer.connect({
     browserWSEndpoint: `wss://production-sfo.browserless.io/?token=${process.env.BROWSERLESS_TOKEN}&launch=${launchArgs}`,
   });
+  // const browser = await puppeteer.launch({
+  //   headless: false,
+  // });
   /**
    * @type {Page}
    */
@@ -142,7 +150,13 @@ app.post("/add_account", upload.none(), async (req, res) => {
       await delay(2000);
       await page.type('input[type="email"]', google_login_email);
       await page.click('[data-primary-action-label="Next"] button');
-      await page.waitForSelector('input[type="password"]', { visible: true });
+      try {
+        await page.waitForSelector('input[type="password"]', { visible: true });
+      } catch (error) {
+        console.log(`Incorrect google email : ${google_login_email}`);
+        res.status(400).send(`Incorrect email : ${google_login_password}`);
+        return;
+      }
       await delay(3000);
       await page.type('input[type="password"]', google_login_password);
       await page.waitForSelector(
@@ -151,6 +165,15 @@ app.post("/add_account", upload.none(), async (req, res) => {
       await page.click(
         '[data-primary-action-label="Next"] button[type="button"]'
       );
+      await delay(3000);
+      const invalidPass = await page.$(
+        "::-p-text(Wrong password. Try again or click Forgot password to reset it.)"
+      );
+      if (invalidPass) {
+        console.log(`Incorrect google password : ${google_login_email}`);
+        res.status(400).send(`Incorrect password : ${google_login_email}`);
+        return;
+      }
       try {
         await page.waitForSelector("::-p-text(Continue)");
         await page.click("::-p-text(Continue)");
@@ -166,13 +189,18 @@ app.post("/add_account", upload.none(), async (req, res) => {
       await page.waitForSelector('[role="dialog"] button[type="button"]');
       await page.click('[role="dialog"] button[type="button"]');
     } catch (error) {}
+    console.log(`Account added successfully : ${google_login_email}`);
     res.send("Account added successfully");
   } catch (error) {
     // await page.screenshot({ path: "screenshot.png" });
-    console.error("Error during account addition:", error.message);
+    console.error(
+      `${google_login_email} Error during account addition:`,
+      error.message
+    );
     res.status(500).send("An error occurred while adding the account.");
   } finally {
     await browser.close();
+    console.log("Browser closed");
   }
 });
 
