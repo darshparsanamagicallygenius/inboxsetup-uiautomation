@@ -3,7 +3,7 @@ const puppeteer = require("puppeteer-core");
 
 // add stealth plugin and use defaults (all evasion techniques)
 // const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-// puppeteer.use(StealthPlugin());
+//puppeteer.use(StealthPlugin());
 const multer = require("multer");
 const bodyParser = require("body-parser");
 require("dotenv").config();
@@ -201,6 +201,221 @@ app.post("/import-to-smartlead", upload.none(), async (req, res) => {
   } finally {
     await browser.close();
     console.log("Browser closed");
+  }
+});
+
+app.post("/import-to-instantly", upload.none(), async (req, res) => {
+  let {
+    instantly_login_email,
+    instantly_login_password,
+    google_login_email,
+    google_login_password,
+    instantly_workspace,
+  } = req.body;
+
+  console.log("[Instantly] Received request to add account");
+
+  // Check if data is in JSON format
+  if (req.is("application/json")) {
+    console.log("[Instantly] Request is in JSON format");
+    // Validate JSON request body
+    if (
+      !instantly_login_email ||
+      !instantly_login_password ||
+      !google_login_email ||
+      !google_login_password ||
+      !instantly_workspace
+    ) {
+      console.log("[Instantly] Missing required fields in the JSON request");
+      return res
+        .status(400)
+        .send("Missing required fields in the JSON request.");
+    }
+  }
+
+  // Check if data is in multipart/form-data format
+  if (req.is("multipart/form-data")) {
+    console.log("[Instantly] Request is in multipart/form-data format");
+    // Validate form data
+    if (
+      !instantly_login_email ||
+      !instantly_login_password ||
+      !google_login_email ||
+      !google_login_password ||
+      !instantly_workspace
+    ) {
+      console.log("[Instantly] Missing required fields in the form data");
+      return res.status(400).send("Missing required fields in the form data.");
+    }
+  }
+
+  console.log("[Instantly] Adding account to Instantly...");
+  const browser = await puppeteer.connect({
+    browserWSEndpoint: `wss://production-sfo.browserless.io/?token=${process.env.BROWSERLESS_TOKEN}&launch=${launchArgs}`,
+  });
+  // const browser = await puppeteer.launch({
+  //   headless: false,
+  // });
+  const page = await browser.newPage();
+
+  try {
+    await page.goto("https://app.instantly.ai/auth/login", {
+      timeout: 120000,
+      waitUntil: "networkidle2",
+    });
+    console.log("[Instantly] Login page loaded");
+    await page.waitForSelector('input[name="email"]');
+    await page.type('input[name="email"]', instantly_login_email);
+    await page.type('input[name="password"]', instantly_login_password);
+    console.log("[Instantly] Credentials entered");
+    await page.click('button[type="submit"]');
+    console.log("[Instantly] Login button clicked");
+    try {
+      await page.waitForNavigation({
+        timeout: 20000,
+      });
+    } catch (error) {}
+    await page.waitForSelector("button.MuiButton-colorSecondary.cursorPointer");
+    console.log("[Instantly] Navigated to dashboard");
+
+    await page.evaluate(() => {
+      document
+        .querySelector("button.MuiButton-colorSecondary.cursorPointer")
+        .click();
+    });
+
+    try {
+      await page.waitForSelector(
+        `li[role='menuitem']::-p-text(${instantly_workspace})`
+      );
+      await page.click(`li[role="menuitem"]::-p-text(${instantly_workspace})`);
+      console.log(`[Instantly] Selected workspace: ${instantly_workspace}`);
+    } catch (error) {
+      console.log(`[Instantly] ${instantly_workspace} workspace not found`);
+      res.status(400).send(`${instantly_workspace} workspace not found`);
+      return;
+    }
+
+    await delay(3000);
+
+    // Additional logic to handle Google login or other steps can go here
+    if (google_login_email && google_login_password) {
+      await page.waitForSelector(
+        "button.MuiButton-containedSizeMedium.MuiButton-colorPrimary"
+      );
+      await page.click(
+        "button.MuiButton-containedSizeMedium.MuiButton-colorPrimary"
+      );
+      await page.waitForSelector(
+        "#connect-cards-container > div > div:nth-child(3) h6:nth-child(2)"
+      );
+      await delay(2000);
+      await page.evaluate(() =>
+        document
+          .querySelector(
+            "#connect-cards-container > div > div:nth-child(3) h6:nth-child(2)"
+          )
+          .click()
+      );
+      await page.waitForSelector(
+        '[style="padding-top: 86px;"] button[type="button"]'
+      );
+      await delay(2000);
+
+      await page.evaluate(() =>
+        document
+          .querySelector('[style="padding-top: 86px;"] button[type="button"]')
+          .click()
+      );
+      await page.waitForSelector(".col-12.col-lg-6 button");
+      await delay(2000);
+
+      await page.evaluate(() =>
+        document.querySelector(".col-12.col-lg-6 button").click()
+      );
+      await delay(2000);
+      await page.waitForSelector(
+        'button[type="button"].MuiButton-sizeMedium h6.mb-0:not(.text-muted)'
+      );
+      const newPagePromise = new Promise((x) =>
+        browser.once("targetcreated", (target) => x(target.page()))
+      );
+      await page.evaluate(() =>
+        document
+          .querySelector(
+            'button[type="button"].MuiButton-sizeMedium h6.mb-0:not(.text-muted)'
+          )
+          .click()
+      );
+      const newPage = await newPagePromise;
+      console.log(
+        `[Instantly] - ${google_login_email} Handle Google account login... `
+      );
+      try {
+        await newPage.waitForNavigation({
+          waitUntil: "networkidle2",
+          timeout: 20000,
+        });
+      } catch (error) {}
+      await newPage.waitForSelector('input[type="email"]');
+      await delay(2000);
+      await newPage.type('input[type="email"]', google_login_email);
+      await newPage.click('[data-primary-action-label="Next"] button');
+      try {
+        await newPage.waitForSelector('input[type="password"]', {
+          visible: true,
+        });
+      } catch (error) {
+        console.log(
+          `[Instantly] Incorrect google email : ${google_login_email}`
+        );
+        res.status(400).send(`Incorrect email : ${google_login_password}`);
+        return;
+      }
+      await delay(3000);
+      await newPage.type('input[type="password"]', google_login_password);
+      await newPage.waitForSelector(
+        '[data-primary-action-label="Next"] button[type="button"]'
+      );
+      await newPage.click(
+        '[data-primary-action-label="Next"] button[type="button"]'
+      );
+      await delay(5000);
+      const invalidPass = await newPage.$(
+        "::-p-text(Wrong password. Try again or click Forgot password to reset it.)"
+      );
+      if (invalidPass) {
+        console.log(
+          `[Instantly] Incorrect google password : ${google_login_email}`
+        );
+        res.status(400).send(`Incorrect password : ${google_login_email}`);
+        return;
+      }
+      try {
+        await newPage.waitForSelector("::-p-text(Continue)");
+        await newPage.click("::-p-text(Continue)");
+      } catch (error) {}
+      try {
+        await newPage.waitForSelector("::-p-text(Allow)");
+        await newPage.click("::-p-text(Allow)");
+      } catch (error) {}
+    }
+
+    console.log(
+      `[Instantly] Account added successfully : ${google_login_email}`
+    );
+    res.send("Account added successfully");
+  } catch (error) {
+    console.error(
+      `[Instantly] ${google_login_email} Error during account addition:`,
+      error.message
+    );
+    res.status(500).send("An error occurred while adding the account.");
+  } finally {
+    // await page.screenshot({ path: "screenshot.png", fullPage: true });
+
+    await browser.close();
+    console.log("[Instantly] Browser closed");
   }
 });
 
