@@ -400,17 +400,17 @@ app.post("/import-to-instantly", upload.none(), async (req, res) => {
         await newPage.click("::-p-text(Allow)");
       } catch (error) {}
     }
-    await delay(5000);
+    await delay(7000);
     console.log(
       `[Instantly] Account added successfully : ${google_login_email}`
     );
-    const screenshotBuffer = await page.screenshot({
-      path: "screenshot.png",
-      fullPage: true,
-    });
-    res.setHeader("Content-Type", "image/png");
-    res.send(screenshotBuffer);
-    // res.send("Account added successfully");
+    // const screenshotBuffer = await page.screenshot({
+    //   path: "screenshot.png",
+    //   fullPage: true,
+    // });
+    // res.setHeader("Content-Type", "image/png");
+    // res.send(screenshotBuffer);
+    res.send("Account added successfully");
   } catch (error) {
     console.error(
       `[Instantly] ${google_login_email} Error during account addition:`,
