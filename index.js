@@ -400,7 +400,7 @@ app.post("/import-to-instantly", upload.none(), async (req, res) => {
         await newPage.click("::-p-text(Allow)");
       } catch (error) {}
     }
-    await delay(7000);
+    await delay(10000);
     console.log(
       `[Instantly] Account added successfully : ${google_login_email}`
     );
