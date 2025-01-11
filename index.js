@@ -410,7 +410,7 @@ app.post("/import-to-instantly", upload.none(), async (req, res) => {
     });
     res.setHeader("Content-Type", "image/png");
     res.send(screenshotBuffer);
-    res.send("Account added successfully");
+    // res.send("Account added successfully");
   } catch (error) {
     console.error(
       `[Instantly] ${google_login_email} Error during account addition:`,
