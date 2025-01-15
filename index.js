@@ -108,7 +108,7 @@ app.post("/import-to-smartlead", upload.none(), async (req, res) => {
     // await page.screenshot({ path: "screenshot.png" });
     console.log("Navigated to dashboard");
     try {
-      await page.waitForSelector("i.close-icon");
+      await page.waitForSelector("i.close-icon", { timeout: 10000 });
 
       await page.click("i.close-icon");
     } catch (error) {}
@@ -165,7 +165,20 @@ app.post("/import-to-smartlead", upload.none(), async (req, res) => {
       await page.click(
         '[data-primary-action-label="Next"] button[type="button"]'
       );
-      await delay(3000);
+      await page.waitForNavigation({ waitUntil: "networkidle2" });
+      try {
+        await Promise.race([
+          page.waitForSelector('input[name="confirm"]'),
+          page.waitForSelector("::-p-text(Continue)"),
+        ]);
+        const confirmWorkspace = await page.$('input[name="confirm"]');
+        if (confirmWorkspace) {
+          await page.click('input[name="confirm"]');
+        }
+      } catch (error) {
+        // console.log(`error`, error);
+      }
+      await delay(5000);
       const invalidPass = await page.$(
         "::-p-text(Wrong password. Try again or click Forgot password to reset it.)"
       );
@@ -174,6 +187,7 @@ app.post("/import-to-smartlead", upload.none(), async (req, res) => {
         res.status(400).send(`Incorrect password : ${google_login_email}`);
         return;
       }
+
       try {
         await page.waitForSelector("::-p-text(Continue)");
         await page.click("::-p-text(Continue)");
@@ -380,6 +394,19 @@ app.post("/import-to-instantly", upload.none(), async (req, res) => {
       await newPage.click(
         '[data-primary-action-label="Next"] button[type="button"]'
       );
+      await page.waitForNavigation({ waitUntil: "networkidle2" });
+      try {
+        await Promise.race([
+          page.waitForSelector('input[name="confirm"]'),
+          page.waitForSelector("::-p-text(Continue)"),
+        ]);
+        const confirmWorkspace = await page.$('input[name="confirm"]');
+        if (confirmWorkspace) {
+          await page.click('input[name="confirm"]');
+        }
+      } catch (error) {
+        // console.log(`error`, error);
+      }
       await delay(5000);
       const invalidPass = await newPage.$(
         "::-p-text(Wrong password. Try again or click Forgot password to reset it.)"
