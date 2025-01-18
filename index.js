@@ -165,7 +165,12 @@ app.post("/import-to-smartlead", upload.none(), async (req, res) => {
       await page.click(
         '[data-primary-action-label="Next"] button[type="button"]'
       );
-      await page.waitForNavigation({ waitUntil: "networkidle2" });
+      try {
+        await page.waitForNavigation({
+          waitUntil: "networkidle2",
+          timeout: 10000,
+        });
+      } catch (error) {}
       try {
         await Promise.race([
           page.waitForSelector('input[name="confirm"]'),
@@ -394,7 +399,12 @@ app.post("/import-to-instantly", upload.none(), async (req, res) => {
       await newPage.click(
         '[data-primary-action-label="Next"] button[type="button"]'
       );
-      await page.waitForNavigation({ waitUntil: "networkidle2" });
+      try {
+        await page.waitForNavigation({
+          waitUntil: "networkidle2",
+          timeout: 10000,
+        });
+      } catch (error) {}
       try {
         await Promise.race([
           page.waitForSelector('input[name="confirm"]'),
