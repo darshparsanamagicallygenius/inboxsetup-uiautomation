@@ -400,19 +400,19 @@ app.post("/import-to-instantly", upload.none(), async (req, res) => {
         '[data-primary-action-label="Next"] button[type="button"]'
       );
       try {
-        await page.waitForNavigation({
+        await newPage.waitForNavigation({
           waitUntil: "networkidle2",
           timeout: 10000,
         });
       } catch (error) {}
       try {
         await Promise.race([
-          page.waitForSelector('input[name="confirm"]'),
-          page.waitForSelector("::-p-text(Continue)"),
+          newPage.waitForSelector('input[name="confirm"]'),
+          newPage.waitForSelector("::-p-text(Continue)"),
         ]);
-        const confirmWorkspace = await page.$('input[name="confirm"]');
+        const confirmWorkspace = await newPage.$('input[name="confirm"]');
         if (confirmWorkspace) {
-          await page.click('input[name="confirm"]');
+          await newPage.click('input[name="confirm"]');
         }
       } catch (error) {
         // console.log(`error`, error);
